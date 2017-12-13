@@ -4,7 +4,9 @@ Mac command line utility to copy multiple volumes (SD cards, SSDs etc.) to multi
 # Features
 Autocopy sends commands to Finder (via AppleScript), so you monitor the progress in Finder (as if you clicked and dragged yourself).
 
-Autocopy copies entire contents. It alternates destination drives (i.e. 1->1, 1->2; 2->2, 2->1; 3->1, 3->2; 4->2, 4->1 etc.). 
+Autocopy copies entire contents of source drives, so you don't accidentally forgot a folder.
+
+It alternates destination drives (i.e. 1->1, 1->2; 2->2, 2->1; 3->1, 3->2; 4->2, 4->1 etc.) to reduce bandwidth to a single drive.
 
 Unlike Finder, Autocopy verifies that all destination drives have enough free space before starting to copy.
 
