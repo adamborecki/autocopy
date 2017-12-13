@@ -1,0 +1,4 @@
+#!/bin/bash
+
+#php ~/Google\ Drive/Programming/DataTest/demo.php
+php ~/bin/Autocopy/autocopy_version_Dec13_10am.php "$0" "$1" "$2" "$3"
