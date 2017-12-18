@@ -1,4 +1,4 @@
 #!/bin/bash
 
 #php ~/Google\ Drive/Programming/DataTest/demo.php
-php ~/bin/Autocopy/autocopy_version_Dec15_8pm.php "$0" "$1" "$2" "$3"
+php ~/bin/Autocopy/run_autocopy.php "$0" "$1" "$2" "$3"
