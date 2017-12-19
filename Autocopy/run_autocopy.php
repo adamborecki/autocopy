@@ -20,8 +20,14 @@ $script_info = array(
     "name" => "autocopy",
     "author" => "Adam Borecki",
     "organization" => "recording.LA",
+    "download_url" => "http://recording.LA/software/autocopy",
+    "minimum_version_url" => "http://downloadaccess.adamborecki.com/autocopy/v0.x/minimum_version.php",
     "description" => "This script copies files from multiple SD cards (volumes) to HDDs or SSDs (volumes).",
-    "version" => "0.0",
+    "version" => array(
+        "major" => "0",
+        "minor" => "2",
+        "date" => "Dec 19, 2017",
+    ),
     "history_path" => "/Users"."/".exec("whoami")."bin/Autocopy/history/",
     "todo" => array(
         "allow destionation_path to be changed by user. will required some formatting and validation stuff. do that later not important enough now",
@@ -30,11 +36,10 @@ $script_info = array(
         "demo filesizes",
         "post reports to recording.LA database",
     ),
-    /****
-     * Changelog
-     */
 );
-echo "--- $script_info[name] v$script_info[version] by $script_info[author], $script_info[organization]\n\n";
+echo "--- $script_info[name] by $script_info[author], $script_info[organization]\n";
+echo "--- version {$script_info['version']['major']}.{$script_info['version']['minor']} ({$script_info['version']['date']})\n";
+echo "\n";
 $config = array(
     // todo. put sleep times in here?
     'spare_bytes_buffer' => 200*1000*1000, // 200 * 1000 (KB) * 1000 (MB)
@@ -53,6 +58,31 @@ $purposes = array(
     PURPOSE_UNKNOWN => "unknown",
 );
 
+
+// MINIMUM VERSION
+try {
+    // get minimum version
+    $minimum_version_json = @file_get_contents($script_info["minimum_version_url"]);
+    if(!$minimum_version_json)
+        throw new Exception("Unable to fetch JSON from min version server");
+    $minimum_version = json_decode($minimum_version_json,true);
+    $minimum_version_text = $minimum_version['major'].".".$minimum_version['minor'];
+    $your_version = $script_info['version']['major'].".".$script_info['version']['minor'];
+    $kill_messsage = "Error: the minimum version for this script is $minimum_version_text - you're running $your_version.\n\nPlease visit $script_info[organization] to get the newest version.\n\n\t$script_info[download_url]\n\n";
+    if($script_info['version']['major'] < $minimum_version['major']){
+        die($kill_messsage);
+    }
+    else if($script_info['version']['minor'] < $minimum_version['minor'] ) {
+        die($kill_messsage);
+    }
+} catch(Exception $err){
+    // if offline?
+    echo "Unable to check minimum version requirements!\n";
+    echo "- Are you connected to the internet?\n";
+    echo "- Have you recently updated $script_info[name]? Perhaps try a fresh installation?\n";
+    echo "\n\nPress CONTROL + C to quit. (Or press ENTER to continue -- not recommended!)\n";
+    prompt_user_input();
+}
 
 
 /*
@@ -77,6 +107,8 @@ while(!$ready){
     // todo: make better code. Calculation for $all_have_enough_space should not be part of the display function
     list($all_have_enough_space) = display_volumes($volumes, $purposes, $bytes_required);
     
+    validate_applescript_volume_collisions($volumes);
+
     echo "What do you want to do? (type a number to edit that volume OR type 'ready' to proceed OR control + C to quit)\n";
 
     $user_input = prompt_user_input();
@@ -692,4 +724,55 @@ function prompt_label(){
         }
     }
     return $label;   
+}
+
+
+function validate_applescript_volume_collisions($volumes){
+    // apple script cannot tell F8_SD/ apart from F8_SD 2/
+    // this is a GIGANTIC problem!!
+    // currently there is no solution except to kill the script if it detects a collision in applescript (even though POSIX is okay)
+    /*
+        property source2 : POSIX file "/Volumes/F8_SD 3/" as alias
+        property source1 : POSIX file "/Volumes/F8_SD 1/" as alias
+
+        if (source1 is not equal to source2) then return "COLLISON"
+
+        return ""
+     */
+    $e_flags = array();
+    $counter = 0;
+    foreach($volumes as $volume) {
+        // check all volumes for quote marks
+        if(strpos($volume['absolute_path'],"\"")!== false){
+            die("Error: volume $volume[absolute_path] has a double quotation mark, which could cause unpredictable results.\n");
+        }
+        if(strpos($volume['absolute_path'],"'")!== false){
+            die("Error: volume $volume[absolute_path] has a single quotation mark, which could cause unpredictable results.\n");
+        }
+
+        $e_flags[] = "property source$counter : POSIX file \"$volume[absolute_path]\" as alias";
+        $counter++;
+    }
+
+    $num_sources = $counter - 1;
+    for($this_source = 0;$this_source < $num_sources;$this_source++){
+        for($other_source = 0;$other_source < $num_sources;$other_source++) {
+            if($this_source == $other_source) {
+                continue;
+            } else {
+                $e_flags[] = "if (source$this_source is equal to source$other_source) then return \"COLLISON! \" & source$this_source & \" --- One or more of these volumes must be ejected because they have identical names and AppleScript cannot tell them apart:  \" & source$this_source";
+            }
+        }
+    }
+
+    $command = "osascript ";
+    foreach($e_flags as $e_flag){
+        $command .= "-e '$e_flag' ";
+    }
+    $output = system($command);
+
+    if( trim($output) != ""){
+        echo "ERROR: volume names must be identical in AppleScript. This is probably an F8 sd card problem. Right now, you can only dump 1 F8 card at a time.\n\n";
+        die();
+    }
 }
