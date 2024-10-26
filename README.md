@@ -28,4 +28,6 @@ see also: www.adamborecki.com
 # Usage
 Follow the prompts given on screen
 
-# WATCH OUT! THERE MIGHT BE A POP QUIZ!!!!!!!!! <3 :)
+# WATCH OUT! THERE MIGHT BE A POP QUIZ!!!!!!!!!
+<3
+:)
